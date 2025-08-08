@@ -7,3 +7,5 @@ rootProject.name = "auto-discover"
 include("api", "processor")
 
 
+
+include("test")
