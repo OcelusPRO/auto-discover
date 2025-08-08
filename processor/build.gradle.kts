@@ -3,5 +3,6 @@ plugins {
 }
 
 dependencies {
-    testImplementation(kotlin("test"))
+    implementation(project(":api"))
+    implementation(libs.ksp.api)
 }

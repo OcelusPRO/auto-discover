@@ -4,7 +4,6 @@ plugins {
 rootProject.name = "auto-discover"
 
 
-include("api")
-include("processor")
+include("api", "processor")
 
 

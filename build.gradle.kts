@@ -1,7 +1,14 @@
 plugins {
     alias(libs.plugins.kotlin.jvm) apply false
     `maven-publish`
+    `java-library`
     signing
+}
+
+allprojects {
+    repositories {
+        mavenCentral()
+    }
 }
 
 // Définissez vos informations de projet
