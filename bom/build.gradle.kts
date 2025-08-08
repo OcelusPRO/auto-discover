@@ -22,7 +22,7 @@ publishing {
 
             // Informations du projet qui apparaîtront sur Maven Central
             pom {
-                name.set("autodiscover-processor")
+                name.set("autodiscover-bom")
                 description.set("Annotation pour la découverte de services via KSP.")
                 url.set("https://github.com/OcelusPRO/auto-discover")
                 licenses {
