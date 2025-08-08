@@ -16,6 +16,7 @@ publishing {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
 
+            artifactId = "auto-discover-api"
             // Informations du projet qui apparaîtront sur Maven Central
             pom {
                 name.set("autodiscover-api")
@@ -55,16 +56,6 @@ publishing {
 }
 
 signing {
-    val signingKeyId = findProperty("signing.keyId")
-    val signingKey = findProperty("signing.gnupg.key")
-    val signingPassword = findProperty("signing.password")
-
-    if (signingKeyId != null && signingKey != null && signingPassword != null) {
-        useInMemoryPgpKeys(
-            signingKeyId as String,
-            signingKey as String,
-            signingPassword as String
-        )
-        sign(publishing.publications["mavenJava"])
-    }
+    useGpgCmd()
+    sign(publishing.publications["mavenJava"])
 }
