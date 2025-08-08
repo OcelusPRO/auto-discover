@@ -1,16 +1,19 @@
 plugins {
-    alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.ksp)
-    `java-library`
+    `java-platform` // Le plugin magique pour les BOMs
     `maven-publish`
     signing
 }
 
-dependencies {
-    implementation(project(":api"))
-    implementation(libs.ksp.api)
-}
+// Pas besoin de group/version ici si c'est déjà dans allprojects
 
+dependencies {
+    // On déclare que notre plateforme (BOM) définit les versions
+    // pour les modules 'api' et 'processor'.
+    constraints {
+        api(project(":api"))
+        api(project(":processor"))
+    }
+}
 
 java {
     // Il est crucial d'inclure les sources et la javadoc

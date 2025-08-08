@@ -10,6 +10,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/api" />
+            <option value="$PROJECT_DIR$/bom" />
             <option value="$PROJECT_DIR$/processor" />
             <option value="$PROJECT_DIR$/test" />
           </set>

@@ -5,13 +5,6 @@ plugins {
     signing
 }
 
-
-
-// Définissez vos informations de projet
-group = "fr.ftnl.tools"
-version = "1.0.0"
-
-
 java {
     // Il est crucial d'inclure les sources et la javadoc
     withSourcesJar()
@@ -25,7 +18,7 @@ publishing {
 
             // Informations du projet qui apparaîtront sur Maven Central
             pom {
-                name.set("autodiscover-processor")
+                name.set("autodiscover-api")
                 description.set("Annotation pour la découverte de services via KSP.")
                 url.set("https://github.com/OcelusPRO/auto-discover")
                 licenses {
