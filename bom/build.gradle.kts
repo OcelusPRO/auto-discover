@@ -59,11 +59,16 @@ publishing {
 }
 
 signing {
-    useInMemoryPgpKeys(
-        findProperty("signing.keyId") as String,
-        findProperty("signing.gnupg.key") as String,
-        findProperty("signing.password") as String
-    )
-    // Signe notre publication
-    sign(publishing.publications["mavenJava"])
+    val signingKeyId = findProperty("signing.keyId")
+    val signingKey = findProperty("signing.gnupg.key")
+    val signingPassword = findProperty("signing.password")
+
+    if (signingKeyId != null && signingKey != null && signingPassword != null) {
+        useInMemoryPgpKeys(
+            signingKeyId as String,
+            signingKey as String,
+            signingPassword as String
+        )
+        sign(publishing.publications["mavenJava"])
+    }
 }
