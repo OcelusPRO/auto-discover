@@ -15,12 +15,6 @@ dependencies {
     }
 }
 
-java {
-    // Il est crucial d'inclure les sources et la javadoc
-    withSourcesJar()
-    withJavadocJar()
-}
-
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
