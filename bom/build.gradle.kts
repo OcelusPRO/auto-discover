@@ -18,7 +18,7 @@ dependencies {
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
-            from(components["java"])
+            from(components["javaPlatform"])
 
             // Informations du projet qui apparaîtront sur Maven Central
             pom {
