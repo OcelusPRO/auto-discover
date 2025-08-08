@@ -11,8 +11,3 @@ allprojects {
         mavenCentral()
     }
 }
-
-// Définissez vos informations de projet
-group = "fr.ftnl.tools"
-version = "1.0.0"
-
