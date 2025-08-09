@@ -3,22 +3,10 @@ package fr.ftnl.tools.autoDiscover.processor
 import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.*
 import com.google.devtools.ksp.validate
+import java.io.OutputStream
 
 /**
- * A processor that handles the `@AutoDiscover` annotation and generates service files for
- * annotated classes implementing interfaces. This class is part of a symbol processing tool
- * using the Kotlin Symbol Processing (KSP) API.
  *
- * The processor identifies and validates classes annotated with `@AutoDiscover`, retrieves
- * their implemented interfaces, and generates service descriptor files in the `META-INF.services`
- * directory. These files map each interface to its corresponding implementing class, which is
- * necessary for runtime service discovery.
- *
- * @constructor Creates an instance of `AutoDiscoverProcessor` with the provided code generator
- * and logger for code generation and diagnostics reporting, respectively.
- *
- * @param codeGenerator A utility for generating files during the compilation process.
- * @param logger A logging utility for reporting errors, warnings, and informational messages.
  */
 class AutoDiscoverProcessor(
     private val codeGenerator: CodeGenerator,
@@ -26,12 +14,21 @@ class AutoDiscoverProcessor(
 ) : SymbolProcessor {
 
     /**
-     * Processes symbols in the provided resolver annotated with `@AutoDiscover`.
-     * Filters valid class declarations, generates service files for those classes,
-     * and returns an empty list.
+     * Maintains a mapping between service interface names and their respective implementing classes.
      *
-     * @param resolver the Resolver instance used to obtain and process symbols annotated with `@AutoDiscover`.
-     * @return a list of KSAnnotated symbols processed by this method, which is always an empty list.
+     * Each key in the map represents the fully qualified name of an interface, while the associated value is a mutable set
+     * containing the fully qualified names of classes that implement the interface.
+     *
+     * This variable is used during the annotation processing to collect and store information about the relationships
+     * between interfaces and their implementers, subsequently facilitating the generation of service files.
+     */
+    private val services = mutableMapOf<String, MutableSet<String>>()
+
+    /**
+     * Processes symbols annotated with a specific annotation and organizes them by the interfaces they implement.
+     *
+     * @param resolver The resolver used to find symbols annotated with `@AutoDiscover`.
+     * @return A list of annotated symbols. Currently, this implementation always returns an empty list.
      */
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val annotationName = "fr.ftnl.tools.autoDiscover.api.AutoDiscover"
@@ -45,62 +42,79 @@ class AutoDiscoverProcessor(
         }
 
         symbols.forEach { classDeclaration ->
-            generateServiceFiles(classDeclaration)
+            val serviceImplementer = classDeclaration.qualifiedName?.asString()
+            if (serviceImplementer == null) {
+                logger.error("Impossible d'obtenir le nom qualifié de la classe annotée.", classDeclaration)
+                return@forEach
+            }
+
+            if (classDeclaration.classKind != ClassKind.CLASS) {
+                logger.warn("L'annotation @AutoDiscover sur '$serviceImplementer' sera ignorée car ce n'est pas une classe concrète.", classDeclaration)
+                return@forEach
+            }
+
+            val allInterfaces = getAllSuperInterfaces(classDeclaration)
+            if (allInterfaces.isEmpty()) {
+                logger.warn("La classe $serviceImplementer est annotée avec @AutoDiscover mais n'implémente aucune interface.", classDeclaration)
+                return@forEach
+            }
+
+            allInterfaces.forEach { serviceInterface ->
+                val serviceName = serviceInterface.qualifiedName!!.asString()
+                services.getOrPut(serviceName) { mutableSetOf() }.add(serviceImplementer)
+            }
         }
 
         return emptyList()
     }
 
     /**
-     * Generates service provider configuration files for the provided class declaration
-     * if the class implements one or more interfaces.
+     * Finalizes the processing by generating service descriptor files for the collected services.
      *
-     * The service files are created under the "META-INF.services" directory
-     * corresponding to each interface the class implements.
+     * This method creates a descriptor file for each discovered service (interface) and writes the corresponding
+     * implementations to the file. The files are generated in the "META-INF.services" directory. If an error occurs
+     * during the file generation process, an error message will be logged.
      *
-     * Outputs a warning if the class does not implement any interfaces,
-     * and logs errors or warnings for various conditions during file generation.
+     * Logging:
+     * - Logs a message when the service generation process starts and ends.
+     * - Logs details for each successfully created service file, indicating the service name and the number of implementations.
+     * - Logs errors if file generation fails or encounters exceptions.
      *
-     * @param classDeclaration represents the annotated class for which service files need to be generated.
+     * Behavior:
+     * - If no services were collected, the method exits early without performing any operation.
+     * - For each service, writes the fully qualified names of its implementations, separating them by line.
      */
-    private fun generateServiceFiles(classDeclaration: KSClassDeclaration) {
-        val serviceImplementer = classDeclaration.qualifiedName?.asString()
-        if (serviceImplementer == null) {
-            logger.error("Impossible d'obtenir le nom qualifié de la classe annotée.", classDeclaration)
-            return
-        }
+    override fun finish() {
+        if (services.isEmpty()) return
 
-        val allInterfaces = getAllSuperInterfaces(classDeclaration)
+        logger.info("AutoDiscover : Génération des fichiers de service...")
 
-        if (allInterfaces.isEmpty()) {
-            logger.warn("La classe $serviceImplementer est annotée avec @AutoDiscover mais n'implémente aucune interface.", classDeclaration)
-            return
-        }
-
-        allInterfaces.forEach { serviceInterface ->
-            val serviceName = serviceInterface.qualifiedName!!.asString()
-            logger.info("Génération du fichier de service pour $serviceName avec l'implémentation $serviceImplementer")
-
+        services.forEach { (serviceName, implementers) ->
             try {
-                val file = codeGenerator.createNewFile(
-                    dependencies = Dependencies(true, classDeclaration.containingFile!!),
+                val file: OutputStream = codeGenerator.createNewFile(
+                    dependencies = Dependencies(true),
                     packageName = "META-INF.services",
                     fileName = serviceName,
                     extensionName = ""
                 )
-                file.write(serviceImplementer.toByteArray())
+
+                file.write(implementers.joinToString("\n").toByteArray())
                 file.close()
-            } catch (e: FileAlreadyExistsException) {
-                logger.warn("Le fichier de service pour $serviceName existe déjà. Il peut y avoir plusieurs implémentations.")
+                logger.info("  - Fichier pour '$serviceName' créé avec ${implementers.size} implémentation(s).")
+
+            } catch (e: Exception) {
+                logger.error("AutoDiscover: Erreur lors de la génération du fichier de service pour '$serviceName'. Exception: ${e.message}")
             }
         }
+        logger.info("AutoDiscover : Génération terminée.")
     }
 
     /**
-     * Retrieves all superinterfaces implemented by the given class declaration, including indirect ones.
+     * Collects and returns all superinterfaces that the given class declaration directly or indirectly implements.
+     * Traverses the hierarchy of the provided class declaration to identify all implemented interfaces.
      *
-     * @param classDeclaration the class declaration whose superinterfaces need to be collected.
-     * @return a set of class declarations representing all the interfaces implemented by the given class declaration.
+     * @param classDeclaration The class declaration whose superinterfaces are to be retrieved.
+     * @return A set of class declarations representing all identified superinterfaces of the provided class.
      */
     private fun getAllSuperInterfaces(classDeclaration: KSClassDeclaration): Set<KSClassDeclaration> {
         val interfaces = mutableSetOf<KSClassDeclaration>()
@@ -113,39 +127,34 @@ class AutoDiscoverProcessor(
             processed.add(currentClass)
 
             currentClass.superTypes.forEach { superTypeRef ->
-                val superType = superTypeRef.resolve().declaration as KSClassDeclaration
-                if (superType.classKind == ClassKind.INTERFACE) {
+                val superType = superTypeRef.resolve().declaration
+                if (superType is KSClassDeclaration && superType.classKind == ClassKind.INTERFACE) {
                     interfaces.add(superType)
+                    toProcess.add(superType)
+                } else if (superType is KSClassDeclaration && superType.classKind == ClassKind.CLASS) {
+                    toProcess.add(superType)
                 }
-                toProcess.add(superType)
             }
         }
         return interfaces
     }
 }
 
+
 /**
- * A provider for the `AutoDiscoverProcessor` symbol processor. It is responsible for creating
- * instances of the processor when requested by the Kotlin Symbol Processing (KSP) environment.
+ * Provides an implementation of SymbolProcessorProvider for enabling the automatic discovery
+ * of service classes annotated with a specified annotation.
  *
- * The `AutoDiscoverProcessorProvider` facilitates the integration of the custom symbol
- * processing logic defined in `AutoDiscoverProcessor` into the compilation process by following
- * the contract of the `SymbolProcessorProvider` interface.
- *
- * The processor generated by this provider processes symbols that are annotated with the
- * `@AutoDiscover` annotation. It validates and processes these symbols to generate
- * service files in the `META-INF.services` directory.
+ * This provider is responsible for creating instances of the SymbolProcessor, which processes
+ * Kotlin symbols during annotation processing in a project.
  */
 class AutoDiscoverProcessorProvider : SymbolProcessorProvider {
     /**
-     * Creates a new instance of the `AutoDiscoverProcessor` using the provided environment.
+     * Creates and returns a new instance of the `AutoDiscoverProcessor` configured with the given environment.
      *
-     * The environment provides access to necessary tools such as a code generator and logger,
-     * which are utilized by the `AutoDiscoverProcessor`.
-     *
-     * @param environment The processing environment which provides utilities like code generation, logging,
-     *                     and access to symbols for annotation processing.
-     * @return An instance of `AutoDiscoverProcessor` initialized with the provided environment.
+     * @param environment The `SymbolProcessorEnvironment` that provides the resources needed to configure the processor
+     * such as the code generator and logger.
+     * @return A new instance of `SymbolProcessor` configured with the specified `SymbolProcessorEnvironment`.
      */
     override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor {
         return AutoDiscoverProcessor(environment.codeGenerator, environment.logger)
