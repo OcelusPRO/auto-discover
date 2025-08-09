@@ -60,7 +60,7 @@ subprojects {
     extensions.configure<PublishingExtension> {
         publications {
             register<MavenPublication>("mavenJava") {
-                artifactId = "auto-discover-${project.name}"
+                artifactId = "${rootProject.name}-${project.name}"
 
                 plugins.withId("java-library") {
                     from(project.components["java"])
@@ -83,7 +83,7 @@ subprojects {
                 }
 
                 pom {
-                    url.set("https://github.com/OcelusPRO/auto-discover")
+                    url.set("https://github.com/OcelusPRO/${rootProject.name}")
                     licenses {
                         license {
                             name.set("The Apache License, Version 2.0")
@@ -98,9 +98,9 @@ subprojects {
                         }
                     }
                     scm {
-                        connection.set("scm:git:git://github.com/oceluspro/auto-discover.git")
-                        developerConnection.set("scm:git:ssh://github.com/oceluspro/auto-discover.git")
-                        url.set("https://github.com/oceluspro/auto-discover")
+                        connection.set("scm:git:git://github.com/oceluspro/${rootProject.name}.git")
+                        developerConnection.set("scm:git:ssh://github.com/oceluspro/${rootProject.name}.git")
+                        url.set("https://github.com/oceluspro/${rootProject.name}")
                     }
                 }
             }
