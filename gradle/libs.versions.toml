@@ -2,6 +2,7 @@
 kotlin = "2.2.0"
 ksp = "2.2.0-2.0.2"
 nexus = "2.0.0"
+dokka = "2.0.0"
 
 [libraries]
 # Dépendance pour l'API de KSP
@@ -12,3 +13,4 @@ ksp-api = { group = "com.google.devtools.ksp", name = "symbol-processing-api", v
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
