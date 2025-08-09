@@ -1,80 +1,78 @@
+import io.github.gradlenexus.publishplugin.NexusPublishExtension
+
 plugins {
     alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.nexus.publish)
 }
 
 allprojects {
     group = "fr.ftnl.tools"
-    version = "1.0.1"
+    version = "1.0.1-SNAPSHOT"
 
     repositories {
         mavenCentral()
     }
+}
 
-
-    plugins.withType<PublishingPlugin> {
-        extensions.configure<PublishingExtension> {
-            repositories {
-                mavenLocal {
-                    url = rootProject.layout.buildDirectory.dir("repo").get().asFile.toURI()
-                }
-            }
+extensions.configure<NexusPublishExtension> {
+    repositories {
+        sonatype {
+            // On utilise l'URL du nouveau portail
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
+            username.set(System.getenv("OSSRH_USERNAME") ?: findProperty("ossrhUsername")?.toString())
+            password.set(System.getenv("OSSRH_PASSWORD") ?: findProperty("ossrhPassword")?.toString())
         }
     }
 }
+
 
 subprojects {
-    plugins.withType<PublishingPlugin> {
+    // Applique les plugins nécessaires à la publication
+    plugins.apply("org.gradle.maven-publish")
+    plugins.apply("signing")
 
-        val tachePublicationTemporaire = tasks.register<PublishToMavenRepository>("publicationVersRepoTemporaire") {
-            group = "publishing" // C'est une bonne pratique de grouper les tâches internes
-            description = "Tâche interne pour publier dans un dépôt temporaire pour le ZIP."
-            publication = project.extensions.getByType<PublishingExtension>().publications.getByName("mavenJava") as MavenPublication
-            repository = project.repositories.maven {
-                name = "repoTemporairePourZip"
-                // On place le dépôt temporaire dans le dossier build du module
-                url = project.layout.buildDirectory.dir("repo-publication").get().asFile.toURI()
-            }
-        }
-
-        tasks.register<Zip>("creerZipPublication") {
-            group = "publishing"
-            description = "Crée une archive ZIP de la publication de ce module pour un envoi manuel."
-
-            // La tâche de ZIP dépend maintenant de la tâche de publication déclarée juste au-dessus.
-            dependsOn(tachePublicationTemporaire)
-
-            // La source du ZIP est le dossier rempli par la tâche de publication.
-            from(tachePublicationTemporaire.get().repository.url)
-
-            destinationDirectory.set(project.layout.buildDirectory.dir("distributions"))
-            archiveFileName.set("${project.name}-${project.version}.zip")
-
-            doLast {
-                logger.lifecycle("✅ Le ZIP de publication pour '${project.name}' a été créé ici : ${archiveFile.get().asFile.absolutePath}")
-            }
-        }
+    // Configure la signature pour chaque sous-projet
+    extensions.configure<SigningExtension> {
+        useGpgCmd()
+        sign(extensions.getByType<PublishingExtension>().publications)
     }
-}
 
+    // Configure CE QUI est publié pour chaque sous-projet
+    extensions.configure<PublishingExtension> {
 
-tasks.register("publishSnapshot") {
-    group = "publishing"
-    description = "Publie tous les modules en version SNAPSHOT."
-
-    // On déclare que cette tâche dépend de toutes les vraies tâches de publication
-    // dans les sous-projets. `withType` est plus robuste que de chercher par nom.
-    dependsOn(subprojects.flatMap { it.tasks.withType<PublishToMavenRepository>() })
-}
-gradle.taskGraph.whenReady {
-    // Si la tâche "publishSnapshot" fait partie de l'exécution demandée...
-    if (hasTask(":publishSnapshot")) {
-        // ...et si la version n'est pas déjà un snapshot...
-        if (!project.version.toString().endsWith("-SNAPSHOT")) {
-            // ...alors on modifie la version pour tous les projets.
-            allprojects {
-                version = "${project.version}-SNAPSHOT"
+        publications.create<MavenPublication>("mavenJava") {
+            // L'artifactId est dynamiquement défini avec le nom du module
+            artifactId = "auto-discover-${project.name}"
+            plugins.withId("java-library") {
+                from(components["java"])
             }
-            logger.lifecycle("✅ Version changée en '${project.version}' pour la publication snapshot.")
+            plugins.withId("java-platform") {
+                from(components["javaPlatform"])
+            }
+
+            pom {
+                // Informations génériques (peuvent être surchargées dans les modules si besoin)
+                url.set("https://github.com/OcelusPRO/auto-discover")
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("oceluspro")
+                        name.set("ocelus_ftnl")
+                        email.set("contact@ftnl.fr")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:git://github.com/oceluspro/auto-discover.git")
+                    developerConnection.set("scm:git:ssh://github.com/oceluspro/auto-discover.git")
+                    url.set("https://github.com/oceluspro/auto-discover")
+                }
+            }
         }
     }
 }

@@ -1,7 +1,5 @@
 plugins {
     `java-platform` // Le plugin magique pour les BOMs
-    `maven-publish`
-    signing
 }
 
 // Pas besoin de group/version ici si c'est déjà dans allprojects
@@ -15,51 +13,11 @@ dependencies {
     }
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            from(components["javaPlatform"])
-
-            artifactId = "auto-discover-bom"
-            // Informations du projet qui apparaîtront sur Maven Central
-            pom {
-                name.set("autodiscover-bom")
-                description.set("Annotation pour la découverte de services via KSP.")
-                url.set("https://github.com/OcelusPRO/auto-discover")
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                    }
-                }
-                developers {
-                    developer {
-                        id.set("oceluspro")
-                        name.set("ocelus_ftnl")
-                        email.set("contact@ftnl.fr")
-                    }
-                }
-                scm {
-                    connection.set("scm:git:git://github.com/oceluspro/auto-discover.git")
-                    developerConnection.set("scm:git:ssh://github.com/oceluspro/auto-discover.git")
-                    url.set("https://github.com/oceluspro/auto-discover")
-                }
-            }
+extensions.configure<PublishingExtension> {
+    publications.named<MavenPublication>("mavenJava") {
+        pom {
+            name.set("BOM for Auto-Discover")
+            description.set("A Bill of Materials (BOM) for the Auto-Discover library, defining versions for its modules.")
         }
     }
-    repositories {
-        maven {
-            name = "CentralPortal"
-            url = uri("https://central.sonatype.com/api/v1/publisher")
-            credentials {
-                username = System.getenv("OSSRH_USERNAME") ?: findProperty("ossrhUsername")?.toString()
-                password = System.getenv("OSSRH_PASSWORD") ?: findProperty("ossrhPassword")?.toString()
-            }
-        }
-    }
-}
-
-signing {
-    useGpgCmd()
-    sign(publishing.publications["mavenJava"])
 }
