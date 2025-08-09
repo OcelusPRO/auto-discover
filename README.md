@@ -39,13 +39,12 @@ Add the following lines to the `dependencies` block of your `build.gradle.kts` f
 ```kotlin
 dependencies {
     // 1. Import the BOM to manage versions
-    implementation(platform("fr.ftnl.tools:bom:1.0.0"))
-    ksp(platform("fr.ftnl.tools:bom:1.0.0"))
+    implementation(platform("fr.ftnl.tools:auto-discover-bom:1.0.1"))
 
     // 2. Add the library dependencies
     // Versions are managed by the BOM, you don't need to specify them.
-    implementation("fr.ftnl.tools:api")
-    ksp("fr.ftnl.tools:processor")
+    implementation("fr.ftnl.tools:auto-discover-api")
+    ksp("fr.ftnl.tools:auto-discover-processor")
 }
 ```
 
