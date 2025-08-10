@@ -1,7 +1,6 @@
 # AutoDiscover
 
-[![Maven Central](https://img.shields.io/maven-central/v/fr.ftnl.tools/auto-discover-bom.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:fr.ftnl.tools)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+![Maven Central Version](https://img.shields.io/maven-central/v/fr.ftnl.tools/auto-discover-bom?strategy=highestVersion&link=https%3A%2F%2Fcentral.sonatype.com%2Fartifact%2Ffr.ftnl.tools%2Fauto-discover)
 
 **AutoDiscover** is a lightweight Kotlin library that uses [KSP (Kotlin Symbol Processing)](https://kotlinlang.org/docs/ksp-overview.html) to automate service discovery and registration, inspired by Java's standard `ServiceLoader` mechanism.
 
@@ -103,6 +102,12 @@ fun main() {
 
 ---
 
-## License
+# License
 
-This project is distributed under the Apache 2.0 License. See the `LICENSE` file for more details.
+This project is distributed under a **dual-license model**:
+
+1.  **Free License (GNU AGPLv3):** For personal, educational, or any project where you are willing to share your source code. You may use, modify, and distribute this software under the terms of the **GNU Affero General Public License v3**. For more information, please see the [AGPLv3 License](LICENCES/agpl-3.0.md) file.
+
+2.  **Commercial License:** For companies and proprietary projects that do not wish to release their source code publicly. This license allows you to use the software in exchange for a recurring donation. The full terms and conditions, including financial contribution and attribution requirements, are detailed in the [Commercial License](LICENCES/commercial.md) file.
+
+We encourage you to choose the license that best suits your use case.
